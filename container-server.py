@@ -56,9 +56,11 @@ def images_index():
     List all images 
     
     Complete the code below generating a valid response. 
+    
+    curl -s -X GET -H 'Accept: application/json' http://localhost:8080/images
     """
     
-    resp = json.dumps(docker_ps_to_array(docker('images')))
+    resp = json.dumps(docker_images_to_array(docker('images')))
 
     return Response(response=resp, mimetype="application/json")
 
@@ -67,9 +69,11 @@ def containers_show(id):
     """
     Inspect specific container
 
+    curl -s -X GET -H 'Accept: application/json' http://localhost:8080/containers/<id>
+
     """
 
-    resp = json.dumps(docker_ps_to_array(docker('containers ' + id)))
+    resp = docker('inspect', id)
 
     return Response(response=resp, mimetype="application/json")
 
@@ -78,9 +82,11 @@ def containers_log(id):
     """
     Dump specific container logs
 
+    curl -s -X GET -H 'Accept: application/json' http://localhost:8080/containers/<id>/logs
+
     """
     
-    resp = json.dumps(docker_ps_to_array(docker('log ' + id )))
+    resp = json.dumps(docker_logs_to_object(id, docker('logs', id)))
 
     return Response(response=resp, mimetype="application/json")
 
@@ -89,6 +95,9 @@ def containers_log(id):
 def images_remove(id):
     """
     Delete a specific image
+
+    curl -s -X DELETE -H 'Accept: application/json' http://localhost:8080/images/<id>
+
     """
     docker ('rmi', id)
     resp = '{"id": "%s"}' % id
@@ -101,7 +110,8 @@ def containers_remove(id):
 
     """
     
-    resp = json.dumps(docker_ps_to_array(docker('rm ' + id)))
+    docker('rm', id)
+    resp = '{"id": "%s"}' % id
 
     return Response(response=resp, mimetype="application/json")
 
@@ -111,8 +121,16 @@ def containers_remove_all():
     Force remove all containers - dangrous!
 
     """
+    
+    resp = '['
 
-    resp = json.dumps(docker_ps_to_array(docker('rm -f ' + docker('ps'))))
+    for s in docker('ps','-a','-q').splitlines():
+	docker('rm','-f', s)
+	if resp != '[':
+            resp.append(',')
+	resp.append('{"id": "%s"}' % s)
+
+    resp.append(']')
 
     return Response(response=resp, mimetype="application/json")
 
@@ -122,8 +140,16 @@ def images_remove_all():
     Force remove all images - dangrous!
 
     """
- 
-    resp = json.dumps(docker_ps_to_array(docker('rmi -f ' + docker('images'))))
+    resp = '['
+
+    for s in docker('images','-q').splitlines():
+        docker('rmi','-f', s)
+	if resp != '[':
+            resp.append(',')
+        resp.append('{"id": "%s"}' % s)
+
+    resp.append(']')
+        
     return Response(response=resp, mimetype="application/json")
 
 
@@ -154,7 +180,8 @@ def images_create():
     """
     dockerfile = request.files['file']
     
-    resp = ''
+    resp = json.dumps(docker_logs_to_object(docker('load', dockerfile)))    
+
     return Response(response=resp, mimetype="application/json")
 
 
