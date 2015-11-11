@@ -69,7 +69,7 @@ def containers_show(id):
 
     """
 
-    resp = ''
+    resp = json.dumps(docker_ps_to_array(docker('containers ' + id)))
 
     return Response(response=resp, mimetype="application/json")
 
@@ -112,7 +112,7 @@ def containers_remove_all():
 
     """
 
-    resp = json.dumps(docker_ps_to_array(docker('')))
+    resp = json.dumps(docker_ps_to_array(docker('rm -f ' + docker('ps'))))
 
     return Response(response=resp, mimetype="application/json")
 
@@ -123,7 +123,7 @@ def images_remove_all():
 
     """
  
-    resp = ''
+    resp = json.dumps(docker_ps_to_array(docker('rmi -f ' + docker('images'))))
     return Response(response=resp, mimetype="application/json")
 
 
