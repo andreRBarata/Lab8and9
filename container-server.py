@@ -46,7 +46,7 @@ def containers_index():
 	if request.args.get('state') == 'running':
 		output = docker('ps')
 	else:
-	  output = docker('ps', '-a')
+		output = docker('ps', '-a')
 	resp = json.dumps(docker_ps_to_array(output))
 
 	return Response(response=resp, mimetype="application/json")
@@ -59,6 +59,7 @@ def images_index():
 	Complete the code below generating a valid response.
 
 	curl -s -X GET -H 'Accept: application/json' http://localhost:8080/images
+
 	"""
 
 	resp = json.dumps(docker_images_to_array(docker('images')))
@@ -109,6 +110,8 @@ def containers_remove(id):
 	"""
 	Delete a specific container - must be already stopped/killed
 
+	curl -s -X DELETE -H 'Accept: application/json' http://localhost:8080/containers/<id>
+
 	"""
 
 	docker('rm', id)
@@ -121,7 +124,7 @@ def containers_remove_all():
 	"""
 	Force remove all containers - dangrous!
 
-	curl -s -X DELETE -H 'Accept: application/json' http://localhost:8080/images
+	curl -s -X DELETE -H 'Accept: application/json' http://localhost:8080/containers
 
 	"""
 
@@ -141,6 +144,8 @@ def containers_remove_all():
 def images_remove_all():
 	"""
 	Force remove all images - dangrous!
+
+	curl -s -X DELETE -H 'Accept: application/json' http://localhost:8080/images
 
 	"""
 	resp = '['
