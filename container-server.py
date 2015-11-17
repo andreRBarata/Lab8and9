@@ -36,7 +36,7 @@ DELETE /images                      Delete all images
 def containers_index():
     """
     List all containers
- 
+
     curl -s -X GET -H 'Accept: application/json' http://localhost:8080/containers | python -mjson.tool
     curl -s -X GET -H 'Accept: application/json' http://localhost:8080/containers?state=running | python -mjson.tool
 
@@ -53,13 +53,13 @@ def containers_index():
 @app.route('/images', methods=['GET'])
 def images_index():
     """
-    List all images 
-    
-    Complete the code below generating a valid response. 
-    
+    List all images
+
+    Complete the code below generating a valid response.
+
     curl -s -X GET -H 'Accept: application/json' http://localhost:8080/images
     """
-    
+
     resp = json.dumps(docker_images_to_array(docker('images')))
 
     return Response(response=resp, mimetype="application/json")
@@ -85,7 +85,7 @@ def containers_log(id):
     curl -s -X GET -H 'Accept: application/json' http://localhost:8080/containers/<id>/logs
 
     """
-    
+
     resp = json.dumps(docker_logs_to_object(id, docker('logs', id)))
 
     return Response(response=resp, mimetype="application/json")
@@ -109,7 +109,7 @@ def containers_remove(id):
     Delete a specific container - must be already stopped/killed
 
     """
-    
+
     docker('rm', id)
     resp = '{"id": "%s"}' % id
 
@@ -121,7 +121,7 @@ def containers_remove_all():
     Force remove all containers - dangrous!
 
     """
-    
+
     resp = '['
 
     for s in docker('ps','-a','-q').splitlines():
@@ -144,12 +144,12 @@ def images_remove_all():
 
     for s in docker('images','-q').splitlines():
         docker('rmi','-f', s)
-	if resp != '[':
+	      if resp != '[':
             resp.append(',')
         resp.append('{"id": "%s"}' % s)
 
     resp.append(']')
-        
+
     return Response(response=resp, mimetype="application/json")
 
 
@@ -166,6 +166,11 @@ def containers_create():
     body = request.get_json(force=True)
     image = body['image']
     args = ('run', '-d')
+
+    if ('publish' in body):
+	args.append('-p')
+	args.append(body['publish'])
+
     id = docker(*(args + (image,)))[0:12]
     return Response(response='{"id": "%s"}' % id, mimetype="application/json")
 
@@ -179,8 +184,23 @@ def images_create():
 
     """
     dockerfile = request.files['file']
-    
-    resp = json.dumps(docker_logs_to_object(docker('load', dockerfile)))    
+    file = secure_file(dockerfile.filename)
+
+    images_pre = docker('ps','-a','-q').splitlines()
+
+    docker('load','-i', file)
+
+    images_post = docker('ps','-a','-q').splitlines()
+
+    resp = '['
+    for id in images_post:
+	if id not in images_pre:
+            if resp != '[':
+                resp.append(',')
+            resp.append('{"id": "%s"}' % s)
+
+    resp.append(']')
+
 
     return Response(response=resp, mimetype="application/json")
 
@@ -201,6 +221,8 @@ def containers_update(id):
         state = body['state']
         if state == 'running':
             docker('restart', id)
+	elif state == 'stopped':
+	    docker('stop', id)
     except:
         pass
 
@@ -215,7 +237,13 @@ def images_update(id):
     curl -s -X PATCH -H 'Content-Type: application/json' http://localhost:8080/images/7f2619ed1768 -d '{"tag": "test:1.0"}'
 
     """
-    resp = ''
+    
+    body = request.get_json(force=True)
+    tag = body['tag'].lower()
+
+    docker('tag', id, tag)
+
+    resp = '{"id": "%s"}' % id
     return Response(response=resp, mimetype="application/json")
 
 
@@ -229,13 +257,13 @@ def docker(*args):
         print 'Error: {0} -> {1}'.format(' '.join(cmd), stderr)
     return stderr + stdout
 
-# 
+#
 # Docker output parsing helpers
 #
 
 #
 # Parses the output of a Docker PS command to a python List
-# 
+#
 def docker_ps_to_array(output):
     all = []
     for c in [line.split() for line in output.splitlines()[1:]]:
@@ -261,7 +289,7 @@ def docker_logs_to_object(id, output):
 
 #
 # Parses the output of a Docker image command to a python List
-# 
+#
 def docker_images_to_array(output):
     all = []
     for c in [line.split() for line in output.splitlines()[1:]]:
