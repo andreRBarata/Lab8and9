@@ -188,7 +188,7 @@ def images_create():
 
     images_pre = docker('ps','-a','-q').splitlines()
 
-    docker('load','-i', file)
+    docker('build','--rm','-f', file)
 
     images_post = docker('ps','-a','-q').splitlines()
 
