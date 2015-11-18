@@ -101,7 +101,25 @@ def images_remove(id):
 	curl -s -X DELETE -H 'Accept: application/json' http://localhost:8080/images/<id>
 
 	"""
+
+        images = docker_images_to_array(docker('images'))
+        containers = docker_ps_to_array(docker('ps','-a'))
+
+
+
+        for x in images:
+                if (x['id']):
+			name = x['name']
+			break
+
+
+	for x in containers:
+		if (x['image'] == name):
+			docker('stop', x['id'])
+	
+
 	docker ('rmi', id)
+
 	resp = '{"id": "%s"}' % id
 	return Response(response=resp, mimetype="application/json")
 
@@ -114,6 +132,7 @@ def containers_remove(id):
 
 	"""
 
+	docker('stop', id)
 	docker('rm', id)
 	resp = '{"id": "%s"}' % id
 
@@ -131,6 +150,7 @@ def containers_remove_all():
 	resp = '['
 
 	for s in docker('ps','-a','-q').splitlines():
+		docker('stop', s)
 		docker('rm','-f', s)
 		if resp != '[':
 			resp += ','
@@ -149,6 +169,9 @@ def images_remove_all():
 
 	"""
 	resp = '['
+
+	for s in docker('ps','-a','-q').splitlines():
+		docker('stop', s)
 
 	for s in docker('images','-q').splitlines():
 		docker('rmi','-f', s)
@@ -202,8 +225,8 @@ def images_create():
 	if id is not None:
 		resp = '{"id":"%s"}' % id.group(1)
 	else:
-		resp = '{"errormessage": "%s"}' % output
-	
+		resp = '{"errormessage": "%s"}' % output.replace("\n", "\\n")
+
 
 
 	return Response(response=resp, mimetype="application/json")
@@ -241,9 +264,12 @@ def images_update(id):
 	curl -s -X PATCH -H 'Content-Type: application/json' http://localhost:8080/images/7f2619ed1768 -d '{"tag": "test:1.0"}'
 
 	"""
+	try:
+		body = request.get_json(force=True)
+		tag = body['tag'].lower()
+	except:
+		pass
 
-	body = request.get_json(force=True)
-	tag = body['tag'].lower()
 
 	docker('tag', id, tag)
 
